@@ -1,0 +1,9 @@
+[submodule "automation-capstone-fall-2026"]
+	path = automation-capstone-fall-2026
+	url = https://github.com/ashwathr1008/automation-capstone-fall-2026
+[submodule "ahc"]
+	path = ahc
+	url = https://github.com/xthomaswang/ahc
+[submodule "PreCheck"]
+	path = PreCheck
+	url = https://github.com/halimv/PreCheck
