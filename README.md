@@ -1,14 +1,14 @@
 # ARGUS
 
-ARGUS keeps its original expanded protocol dashboard and adds a **Research workspace** link in the header. That link opens the original LanM application's Research chat, Build chat, evidence library, project tools, numerical analyses and registered custom methods. VENUS is not required for research.
+ARGUS keeps its protocol dashboard at the top and embeds the complete research application in a wider **Research Project** section below. Use its **Chat**, **Build**, **Candidates**, **Database**, and **Tools** tabs for research, tool development, shared evidence, numerical analyses and registered custom methods. VENUS is not required for research.
 
 ## Research workspace and shared records
 
-`argus serve` starts the full research application on an automatically selected loopback port and links to it from ARGUS. It opens in a separate browser tab so the existing application's origin protections remain intact. Both services stop together. No model request is made during startup.
+`argus serve` starts the full research application on an automatically selected loopback port. ARGUS embeds it through its own `/research/` bridge; the original standalone application remains available through **Open separately**. Both services stop together. No model request is made during startup, and local model servers are not started automatically.
 
 On first use, an empty `workspace/lanm` receives the verified shared starter: **616 candidates, 441 library records including 14 sources, and two registered method versions**. The starter does not migrate original projects, conversations, project sources, experiments or run history. The research application creates a fresh exploration project. The original standalone research database remains separate and untouched.
 
-The research application and ARGUS ranking use that same directory. Projects created in the research workspace can be selected in the dashboard's **Research project** control; **Refresh** reloads the list. Ranking then saves its result in the selected project without changing its metal pair, assumptions or candidate-specific records. A conflicting metal pair is refused. The protocol assistant retains its focused tools; the complete Research and Build chats expose the platform's full tool set.
+The research application and ARGUS ranking use that same directory. The dashboard's **Research project** selector and the embedded application's project selector stay in sync; **Refresh** reloads the list. **New project for this pipeline run** requests a separate project when ranking runs. Ranking saves its result without changing an existing project's metal pair, assumptions or candidate-specific records. A conflicting metal pair is refused. Project switches from pipeline results wait until an active research turn finishes. The protocol assistant retains its focused tools; the complete Chat and Build modes expose the platform's full tool set. Protocol calls appear in **Pipeline activity**, alongside the existing results tabs.
 
 Existing ARGUS data is never replaced by a starter update. A directory containing files but no database is refused rather than overwritten. For a fresh separate installation set `ARGUS_WORKSPACE` to a new directory. Advanced existing-data reuse is available with `argus serve --lanm-data-dir PATH` or `ARGUS_LANM_DATA_DIR`; that path must already contain `research.sqlite3`. It is not required for transferring shared records and does not copy or merge history.
 
@@ -80,9 +80,9 @@ uv run argus serve            # http://127.0.0.1:8780
 
 On Windows, after installing uv, double-click **Launch ARGUS.cmd**, or run `./launch-argus.ps1`. The launcher initializes missing submodules and installs the locked dependencies when the environment is absent. Use `./launch-argus.ps1 -Sync` after dependency updates. `-ProfilesFile PATH_TO_MODEL_PROFILES_JSON` selects an existing model configuration; it does not import research projects or conversations.
 
-Open **Research workspace** in the ARGUS header. Research and Build chat, shared evidence, candidate records, calculations, and reusable methods are available there without VENUS. Keep the launcher running while using either page.
+Click **Research Project** in the ARGUS header to jump to the embedded workspace below, or choose **Open separately** there. Chat and Build, shared evidence, candidate records, calculations, and reusable methods are available without VENUS. **Expand research** provides more room. Keep the launcher running while using either view.
 
-The original protocol dashboard remains visible. Its request form starts with `PreCheck/files/input.txt` (a 1:10 serial dilution) and an example request. When protocol setup is available, select a research project if desired, then press **Run**. Without VENUS, the form explains the missing setup and disables protocol execution; the header's Research workspace link remains available.
+The original protocol dashboard remains visible. Its request form starts with `PreCheck/files/input.txt` (a 1:10 serial dilution) and an example request. When protocol setup is available, select a research project if desired, then press **Run**. Without VENUS, the form explains the missing setup and disables protocol execution; Research Project remains available.
 
 - **Variants & assay map:** the ranked variants, then the plate map of starting concentrations.
 - **Review:** appears once PreCheck has a passing protocol. The SOP stays in the left panel, and each step quotes the SOP clause it carries out. Approve, or describe a change.

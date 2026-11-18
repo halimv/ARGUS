@@ -89,6 +89,7 @@ class LanMWorkspace:
     def info(self):
         return {"available": self.server is not None,
                 "url": f"http://127.0.0.1:{self.server.server_port}/" if self.server else None,
+                "embedded_url": "/research/?embed=argus",
                 "data_dir": str(self.data_dir), "shared_with_argus_ranking": True,
                 "capabilities": ["research_chat", "evidence", "all_lanm_tools", "build", "custom_methods"]}
 

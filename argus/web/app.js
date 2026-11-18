@@ -13,25 +13,6 @@ function showTab(name) {
 }
 
 // ---------------------------------------------------------------- start
-fetch("/api/lanm-workspace").then((r) => {
-  if (!r.ok) throw new Error("The research workspace is unavailable. Check the ARGUS server output.");
-  return r.json();
-}).then((d) => {
-  $("researchWorkspaceLink").title = "Research and Build use the same data as ARGUS ranking. Opens in a separate tab.";
-}).catch((error) => { $("researchWorkspaceLink").title = error.message; });
-async function refreshProjects(selected) {
-  const current = selected ?? $("lanmProject").value;
-  const response = await fetch("/api/lanm-projects");
-  if (!response.ok) return;
-  const data = await response.json();
-  $("lanmProject").replaceChildren(new Option("Create a new project from this request", ""));
-  for (const project of data.projects) {
-    $("lanmProject").add(new Option(`${project.name} · ${project.target}/${project.competitor}`, project.id));
-  }
-  $("lanmProject").value = current;
-}
-$("refreshProjects").addEventListener("click", () => refreshProjects().catch(() => {}));
-refreshProjects().catch(() => {});
 fetch("/api/defaults").then((r) => r.json()).then((d) => {
   if (!$("prompt").value) $("prompt").value = d.prompt;
   if (!$("sop").value) { $("sop").value = d.sop_text; $("sopName").textContent = d.sop_name; }
@@ -56,7 +37,7 @@ $("form").addEventListener("submit", async (e) => {
 if (location.hash.length > 1) {
   const id = location.hash.slice(1);
   fetch("/api/runs/" + id).then((r) => (r.ok ? r.json() : null)).then((s) => {
-    if (s) { $("prompt").value = s.prompt; $("sop").value = s.sop_text; $("sopName").textContent = s.sop_name; refreshProjects(s.project_id || "").catch(() => {}); attach(id, s); }
+    if (s) { $("prompt").value = s.prompt; $("sop").value = s.sop_text; $("sopName").textContent = s.sop_name; if (s.project_id) window.argusResearch.selectProject(s.project_id); attach(id, s); }
   });
 }
 
@@ -72,6 +53,7 @@ function attach(id, body) {
   if (source) source.close();
   source = new EventSource(`/api/runs/${id}/events?after=-1`);
   source.onmessage = (m) => handle(JSON.parse(m.data));
+  showTab("activity");
 }
 
 // ---------------------------------------------------------------- events
@@ -133,6 +115,7 @@ function renderPanel(key, v) {
 let variantsData = null;
 function renderVariants(v) {
   variantsData = v;
+  if (v.lanm_project_id) window.argusResearch.selectProject(v.lanm_project_id);
   $("variantsEmpty").classList.add("hidden"); $("variantsBody").classList.remove("hidden");
   $("variantsTitle").textContent = `Top ${v.variants.length} LanM variants · ${v.target} over ${v.competitor}`;
   $("variantsMeta").textContent = `${v.eligible_count} candidates ranked`;

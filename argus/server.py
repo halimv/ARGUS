@@ -91,6 +91,20 @@ def open_lanm_workspace(request: Request):
     return RedirectResponse(lanm_workspace(request)["url"])
 
 
+@app.get("/research")
+def research_root(request: Request):
+    from argus.research_proxy import validate_request
+    validate_request(request)
+    suffix = "?" + request.url.query if request.url.query else ""
+    return RedirectResponse("/research/" + suffix)
+
+
+@app.api_route("/research/{path:path}", methods=["GET", "POST", "PATCH", "HEAD"])
+async def research_workspace(request: Request, path: str):
+    from argus.research_proxy import proxy_research
+    return await proxy_research(request, getattr(request.app.state, "lanm_workspace", None))
+
+
 # ------------------------------------------------------------------------------------------------ 3D viewer
 @app.get("/viewer")
 def viewer_root(request: Request):

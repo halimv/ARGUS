@@ -13,7 +13,7 @@
     <span class="sub">LanM selection → SOP translation → reviewed STARlet simulation · SpyCI-LAMBS</span>
   </div>
   <div class="top-right">
-    <a id="researchWorkspaceLink" class="workspace-link" href="/lanm" target="_blank" rel="noopener noreferrer" title="Open the full Research and Build workspace">Research workspace ↗</a>
+    <a id="researchWorkspaceLink" class="workspace-link" href="#researchWorkspace" title="Open Research Project below">Research Project ↓</a>
     <span id="status" class="pill">idle</span>
     <span id="cost" class="muted small"></span>
   </div>
@@ -24,7 +24,7 @@
     <form id="form" class="card">
       <div class="row-between"><label class="lbl" for="lanmProject">Research project</label><button id="refreshProjects" type="button" class="small">Refresh</button></div>
       <select id="lanmProject"><option value="">Create a new project from this request</option></select>
-      <p class="muted small">Select a project created in the research workspace to use its records and metal pair. Ranking saves a result; it does not change project inputs.</p>
+      <p class="muted small">The pipeline uses the selected project's records and metal pair. <button id="inspectResearchProject" type="button" class="text-link">Explore this project below ↓</button></p>
       <label class="lbl" for="prompt">Request</label>
       <textarea id="prompt" rows="5" placeholder="What should ARGUS do?"></textarea>
       <div class="row-between">
@@ -39,10 +39,6 @@
       <p id="protocolSetup" class="muted small" role="status">Checking protocol setup…</p>
     </form>
 
-    <section class="card timeline-card">
-      <div class="row-between"><h2>Agent</h2><span id="runId" class="muted small mono"></span></div>
-      <ol id="timeline" class="timeline"><li class="empty muted">Type a request and press Run. ARGUS calls LanM, PreCheck and AHC as tools; every call shows up here.</li></ol>
-    </section>
   </aside>
 
   <section class="right">
@@ -51,6 +47,7 @@
       <button class="tab" data-tab="review">2 · Review <span id="reviewDot" class="dot hidden"></span></button>
       <button class="tab" data-tab="simulation">3 · AHC simulation</button>
       <button class="tab" data-tab="code">PLR script</button>
+      <button class="tab" data-tab="activity">Pipeline activity</button>
     </nav>
 
     <div id="tab-variants" class="panel active">
@@ -143,8 +140,25 @@
       <div id="codeEmpty" class="placeholder">PreCheck's standalone PyLabRobot script appears here.</div>
       <div id="codeBody" class="card hidden"><div class="row-between"><h2>PyLabRobot script</h2><span id="codePath" class="muted small mono"></span></div><pre id="code" class="code"></pre></div>
     </div>
+    <div id="tab-activity" class="panel">
+      <section class="card timeline-card">
+        <div class="row-between"><h2>Pipeline agent</h2><span id="runId" class="muted small mono"></span></div>
+        <ol id="timeline" class="timeline"><li class="empty muted">Run a pipeline request above to follow selection, SOP translation, review and simulation here.</li></ol>
+      </section>
+    </div>
+  </section>
+
+  <section id="researchWorkspace" class="card research-workspace" aria-labelledby="researchHeading">
+    <div class="research-heading">
+      <div><h2 id="researchHeading">Research Project</h2><p class="muted small">Chat, build and use tools, and explore candidates and evidence in the same project.</p></div>
+      <div class="research-actions"><button id="expandResearch" type="button" aria-expanded="false">Expand research</button><a id="researchStandalone" href="/lanm" target="_blank" rel="noopener noreferrer">Open separately ↗</a></div>
+    </div>
+    <p id="researchStatus" class="muted small" role="status">Connecting to the research workspace…</p>
+    <iframe id="researchFrame" class="research-frame" title="Research Project: chat, build, candidates, database and tools" src="about:blank"></iframe>
+    <div id="researchUnavailable" class="research-unavailable hidden"><p>The research workspace could not be loaded.</p><button id="retryResearch" type="button">Try again</button></div>
   </section>
 </main>
+<script src="/static/research.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>
