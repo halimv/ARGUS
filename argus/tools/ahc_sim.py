@@ -23,7 +23,9 @@ from mcp import Client
 
 from argus.tools import lanm  # noqa: F401  (config.setup())
 
-from ahc.server import create_server  # noqa: E402
+from argus.platform_compat import load_simulation_server  # noqa: E402
+
+create_server = load_simulation_server()
 
 ROWS = "ABCDEFGH"
 PIPETTE = "starlet.pip"

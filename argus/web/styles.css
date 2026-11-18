@@ -26,6 +26,8 @@ h2 { font-size: 14px; margin: 0 0 10px; font-weight: 650; }
 .logo { font-weight: 800; letter-spacing: .12em; color: var(--accent); }
 .sub { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .top-right { display: flex; align-items: center; gap: 10px; }
+.workspace-link { color: var(--accent); font-weight: 600; }
+#lanmProject { width: 100%; padding: 8px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; }
 .pill { font-size: 12px; padding: 3px 10px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
 .layout { display: grid; grid-template-columns: minmax(320px, 400px) minmax(0, 1fr); gap: 16px; padding: 16px 20px; align-items: start; }

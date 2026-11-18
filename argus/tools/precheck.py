@@ -91,7 +91,7 @@ def _record(stem, source, ir, rounds, tiers, report) -> None:
 
 
 def translate_sop(sop_text: str, plate_map: Optional[Dict[str, Any]], stem: str, emit: Emit) -> Dict[str, Any]:
-    """SOP (+ the TEA gate's plate map as assay context) -> healed protocol whose deck AHC loads. Slow: drafting and
+    """SOP (+ the assay plate map as context) -> healed protocol whose deck AHC loads. Slow: drafting and
     repair call Claude."""
     source = sop_text.strip() + ("\n" + lanm.assay_context(plate_map) if plate_map else "")
     base_deck, deck_file = _base_deck()
@@ -222,7 +222,7 @@ def reconcile(result: Dict[str, Any], emit: Emit, can_revise: bool, max_rounds: 
             result = {**result, "ir": ir, "report": report}
 
         problems = labware.structural_problems(check, fixes)
-        problems += [f"ARGUS's TEA plate-map check: {d}" for d in design]
+        problems += [f"ARGUS's assay plate-map check: {d}" for d in design]
         if sug and sug["kind"] == "load":
             problems = [p for p in problems if not p.startswith("AHC's simulator refused step")]
             if needs_revision:
@@ -473,8 +473,8 @@ def package(result: Dict[str, Any], plate_map: Optional[Dict[str, Any]], sop_tex
         review_items.insert(0, {
             "severity": "must", "area": "drafting", "item": "Offline fixture: one shared sample reservoir",
             "detail": "The offline fixture draws the sample for all 8 rows from one reservoir. Per-row LanM variant "
-                      "stocks need a per-row source (live drafting with the TEA assay context). Concentrations shown "
-                      "assume each row's stock is at its TEA starting concentration."})
+                      "stocks need a per-row source (live drafting with the assay context). Concentrations shown "
+                      "assume each row's stock is at its planned starting concentration."})
     setup, model_notes, flags = split_review_items(review_items)
     out = {
         "status": result["status"], "stem": result["stem"], "tiers": result.get("tiers", []),

@@ -13,7 +13,7 @@ VARIANTS = [{"candidate_id": f"o-{i}", "name": f"o-{i}", "contrast": c}
             for i, c in enumerate([0.70, 0.69, 0.66, 0.60])]
 
 
-def test_tea_gate_scales_by_contrast():
+def test_assay_mapping_scales_by_contrast():
     pm = lanm.map_starting_concentrations(VARIANTS, c_max_uM=100, c_min_uM=10)
     starts = [r["start_uM"] for r in pm["rows"]]
     assert starts[0] == 10 and starts[-1] == 100            # highest contrast -> c_min, lowest -> c_max
@@ -22,7 +22,7 @@ def test_tea_gate_scales_by_contrast():
     assert pm["rows"][0]["nominal_uM"][:2] == [1.0, 0.1]    # 1:10 from the stock
 
 
-def test_tea_gate_equal_contrasts_and_limits():
+def test_assay_mapping_equal_contrasts_and_limits():
     pm = lanm.map_starting_concentrations([{**v, "contrast": 0.5} for v in VARIANTS])
     assert {r["start_uM"] for r in pm["rows"]} == {100.0}
     try:

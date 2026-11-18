@@ -69,7 +69,10 @@ class ReviewGate:
 
 
 class Run:
-    def __init__(self, prompt: str, sop_text: str, sop_name: str = "input.txt", offline: bool = False):
+    def __init__(self, prompt: str, sop_text: str, sop_name: str = "input.txt", offline: bool = False,
+                 project_id: Optional[str] = None):
+        self.lanm_project = lanm.store().get_project(project_id) if project_id else None
+        self.lanm_project_id = project_id
         self.id = datetime.now().strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:4]
         self.prompt, self.sop_text, self.sop_name, self.offline = prompt, sop_text, sop_name, offline
         self.folder = config.RUNS / self.id
@@ -105,7 +108,8 @@ class Run:
 
     def snapshot(self) -> Dict[str, Any]:
         return {"id": self.id, "prompt": self.prompt, "sop_text": self.sop_text, "sop_name": self.sop_name,
-                "offline": self.offline, "state": self.state, "review": self.review.public(),
+                "offline": self.offline, "project_id": self.lanm_project_id,
+                "state": self.state, "review": self.review.public(),
                 "n_events": len(self.events)}
 
     def save(self) -> None:
@@ -133,7 +137,12 @@ class Run:
     # ------------------------------------------------------------------------------------------------ tools
     async def rank_variants(self, target: str = "Nd", competitor: str = "La", top_n: int = 8) -> Dict[str, Any]:
         async def go():
-            r = await asyncio.to_thread(lanm.rank_variants, target, competitor, top_n)
+            if self._pc and self._pc.get("ir") is not None:
+                raise ToolRefused("a protocol already exists for this run; start a new run to change the ranked variants")
+            r = await asyncio.to_thread(lanm.rank_variants, target, competitor, top_n,
+                                        project_id=self.lanm_project_id)
+            self.lanm_project_id = r["lanm_project_id"]
+            await self.panel("plate_map", None)
             await self.panel("variants", r)
             names = ", ".join(f"{v['rank']}. {v['name']} ({v['contrast']:.3f})" for v in r["variants"])
             return {**r, "summary": f"Top {len(r['variants'])} for {r['target']} over {r['competitor']}: {names}"}
@@ -144,8 +153,10 @@ class Run:
         args = {"c_max_uM": c_max_uM, "c_min_uM": c_min_uM, "dilution_factor": dilution_factor, "n_points": n_points}
 
         async def go():
+            if self._pc and self._pc.get("ir") is not None:
+                raise ToolRefused("a protocol already exists for this run; start a new run to change the assay map")
             if not self.state.get("variants"):
-                raise ToolRefused("rank_variants first: the TEA gate maps the ranked variants")
+                raise ToolRefused("rank_variants first: assay concentration mapping needs the ranked variants")
             pm = lanm.map_starting_concentrations(self.state["variants"]["variants"], **args)
             await self.panel("plate_map", pm)
             rows = "; ".join(f"{r['row']}: {r['name']} {r['start_uM']:.3g} µM" for r in pm["rows"])

@@ -1,4 +1,4 @@
-"""The whole chain offline: rank -> TEA gate -> fixture protocol -> review gate -> AHC simulation."""
+"""The whole chain offline: rank -> assay concentration mapping -> fixture protocol -> review gate -> AHC simulation."""
 import asyncio
 
 import pytest

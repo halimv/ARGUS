@@ -13,6 +13,7 @@
 """
 
 import asyncio
+from contextlib import asynccontextmanager
 import json
 from pathlib import Path
 from typing import Dict, Optional
@@ -31,7 +32,18 @@ EXAMPLE_PROMPT = ("Pick the top 8 LanM variants for Nd over La for our SpyCI-LAM
                   "concentrations, turn the attached serial dilution SOP into a Hamilton protocol, and run it in "
                   "simulation once I've reviewed it.")
 
-app = FastAPI(title="ARGUS")
+@asynccontextmanager
+async def lifespan(application):
+    from argus.lanm_workspace import LanMWorkspace
+    workspace = await asyncio.to_thread(LanMWorkspace().start)
+    application.state.lanm_workspace = workspace
+    try:
+        yield
+    finally:
+        await asyncio.to_thread(workspace.close)
+
+
+app = FastAPI(title="ARGUS", lifespan=lifespan)
 RUNS: Dict[str, Run] = {}
 TASKS: Dict[str, asyncio.Task] = {}
 
@@ -41,6 +53,7 @@ class NewRun(BaseModel):
     sop_text: str
     sop_name: str = "input.txt"
     offline: bool = False
+    project_id: Optional[str] = None
 
 
 class Decision(BaseModel):
@@ -55,6 +68,27 @@ def index():
 
 
 app.mount("/static", StaticFiles(directory=WEB), name="static")
+
+
+@app.get("/api/lanm-workspace")
+def lanm_workspace(request: Request):
+    workspace = getattr(request.app.state, "lanm_workspace", None)
+    if workspace is None:
+        raise HTTPException(503, "The LanM research workspace is not running.")
+    return workspace.info()
+
+
+@app.get("/api/lanm-projects")
+def lanm_projects(request: Request):
+    lanm_workspace(request)
+    store = request.app.state.lanm_workspace.application.store
+    return {"projects": [{key: row[key] for key in ("id", "name", "target", "competitor")}
+                         for row in store.list_projects()]}
+
+
+@app.get("/lanm")
+def open_lanm_workspace(request: Request):
+    return RedirectResponse(lanm_workspace(request)["url"])
 
 
 # ------------------------------------------------------------------------------------------------ 3D viewer
@@ -135,7 +169,17 @@ def get_gif(run_id: str):
 @app.get("/api/defaults")
 def defaults():
     return {"sop_text": config.DEFAULT_SOP.read_text(), "sop_name": config.DEFAULT_SOP.name,
-            "prompt": EXAMPLE_PROMPT, "model": config.AGENT_MODEL}
+            "prompt": EXAMPLE_PROMPT, "model": config.AGENT_MODEL, "protocol_setup": protocol_setup()}
+
+
+def protocol_setup():
+    from pipeline import paths
+    library = paths.labware()
+    present = library.is_dir() and any(library.rglob("*.rck"))
+    return {"available": present,
+            "note": ("VENUS labware found; protocol-specific checks still run before review." if present else
+                     "Protocol workflow unavailable: configure the VENUS labware library first. "
+                     "The research workspace does not require VENUS.")}
 
 
 async def _drive(run: Run) -> None:
@@ -148,9 +192,16 @@ async def _drive(run: Run) -> None:
 
 @app.post("/api/runs")
 async def new_run(body: NewRun):
+    setup = protocol_setup()
+    if not setup["available"]:
+        raise HTTPException(503, setup["note"])
     if not body.sop_text.strip():
         raise HTTPException(400, "The SOP is empty.")
-    run = Run(body.prompt.strip() or EXAMPLE_PROMPT, body.sop_text, body.sop_name, body.offline)
+    try:
+        run = Run(body.prompt.strip() or EXAMPLE_PROMPT, body.sop_text, body.sop_name, body.offline,
+                  project_id=body.project_id)
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
     RUNS[run.id] = run
     TASKS[run.id] = asyncio.create_task(_drive(run))
     return {"id": run.id}

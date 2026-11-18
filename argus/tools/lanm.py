@@ -1,8 +1,9 @@
-"""LanM research platform as tools: rank variants, then the TEA gate (starting concentrations on a plate map).
+"""LanM research platform as tools: rank variants, then map assay concentrations.
 
 Ranking is LanM's own (`Store.rank`, untested pool: published target-minus-competitor normalized profile contrast).
-LanM has no concentrations, so the TEA gate here is ARGUS's: a heuristic that gives more selective variants (higher
-contrast) a lower starting concentration, interpolated on a log scale between c_max and c_min.
+Ranking supplies no stock concentrations. ARGUS's heuristic gives variants with higher screening contrast a lower
+starting concentration, interpolated on a log scale between c_max and c_min. It makes no economic prediction.
+The full research workspace exposes LanM's separate separation-unit economic model and registered methods.
 """
 
 import math
@@ -19,19 +20,28 @@ _store: Optional[Store] = None
 def store() -> Store:
     global _store
     if _store is None:
+        from argus.lanm_workspace import ensure_data_directory
+        ensure_data_directory()
         _store = Store(str(config.LANM_DATA))
     return _store
 
 
-def rank_variants(target: str = "Nd", competitor: str = "La", top_n: int = 8) -> Dict[str, Any]:
-    """Top `top_n` LanM variants for selectivity of `target` over `competitor`."""
+def rank_variants(target: str = "Nd", competitor: str = "La", top_n: int = 8,
+                  project_id: Optional[str] = None) -> Dict[str, Any]:
+    """Top `top_n` LanM variants by published screening contrast of `target` minus `competitor`."""
     target, competitor = target.strip().capitalize(), competitor.strip().capitalize()
     if target not in METALS or competitor not in METALS or target == competitor:
         raise ValueError(f"target and competitor must be two different elements of {', '.join(METALS)}")
     top_n = max(1, min(int(top_n), len(ROWS)))
     s = store()
-    project = s.create_project(f"ARGUS {target}/{competitor}", target, competitor,
-                               description="Created by ARGUS for a SpyCI-LAMBS serial dilution run")
+    if project_id:
+        project = s.get_project(project_id)
+        if (target, competitor) != (project["target"], project["competitor"]):
+            raise ValueError(f"Selected project uses {project['target']}/{project['competitor']}; "
+                             "use that pair or start a new project. Existing inputs were not changed.")
+    else:
+        project = s.create_project(f"ARGUS {target}/{competitor}", target, competitor,
+                                   description="Created by ARGUS for a SpyCI-LAMBS serial dilution run")
     run = s.rank(project["id"], pool="untested", limit=top_n)
     variants = []
     for row in run["rows"]:
@@ -40,7 +50,7 @@ def rank_variants(target: str = "Nd", competitor: str = "La", top_n: int = 8) ->
             "candidate_id": row["candidate_id"],
             "name": row["name"],
             "organism": row.get("organism"),
-            "contrast": round(float(row["profile_contrast"]), 6),
+            "contrast": float(row["profile_contrast"]),
             "sd": row.get("reported_profile_sd"),
             "source": row.get("source_id"),
         })
@@ -56,31 +66,67 @@ def rank_variants(target: str = "Nd", competitor: str = "La", top_n: int = 8) ->
 
 def starting_concentration(contrast: float, lo: float, hi: float, c_max: float, c_min: float) -> float:
     """c = c_max * (c_min / c_max) ** t, t = (contrast - lo) / (hi - lo): the highest contrast gets c_min."""
-    t = 0.0 if hi - lo < 1e-12 else (contrast - lo) / (hi - lo)
-    return c_max * (c_min / c_max) ** t
+    if hi == lo or contrast == lo:
+        return c_max
+    if contrast == hi:
+        return c_min
+    # Scale overflowing contrast differences and interpolate log concentrations to avoid overflow
+    # in hi - lo and underflow in c_min / c_max for otherwise finite inputs.
+    span = hi - lo
+    t = ((contrast - lo) / span if math.isfinite(span)
+         else (contrast / 2.0 - lo / 2.0) / (hi / 2.0 - lo / 2.0))
+    return math.exp((1.0 - t) * math.log(c_max) + t * math.log(c_min))
+
+
+def _finite_number(value: Any, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{name} must be a finite number")
+    try:
+        value = float(value)
+    except OverflowError as error:
+        raise ValueError(f"{name} must be a finite number") from error
+    if not math.isfinite(value):
+        raise ValueError(f"{name} must be a finite number")
+    return value
 
 
 def map_starting_concentrations(variants: List[Dict[str, Any]], c_max_uM: float = 100.0, c_min_uM: float = 10.0,
                                 dilution_factor: float = 10.0, n_points: int = 6) -> Dict[str, Any]:
-    """The TEA gate: each variant gets a plate row (A-H) and a starting (stock) concentration scaled by its contrast.
+    """Each variant gets a plate row (A-H) and a starting (stock) concentration scaled by its screening contrast.
 
     Columns 1..n_points hold the series; the nominal concentration in column k is start / dilution_factor**k (the
     stock is diluted 1:dilution_factor into column 1). The protocol's actual per-well concentrations are worked out
     from its steps later (`concentrations_from_protocol`)."""
-    if not variants:
-        raise ValueError("no variants to map")
+    if not isinstance(variants, list) or not variants:
+        raise ValueError("supply a nonempty list of variants to map")
+    c_min_uM = _finite_number(c_min_uM, "c_min_uM")
+    c_max_uM = _finite_number(c_max_uM, "c_max_uM")
+    dilution_factor = _finite_number(dilution_factor, "dilution_factor")
     if c_min_uM <= 0 or c_max_uM <= 0 or c_min_uM > c_max_uM:
         raise ValueError("need 0 < c_min_uM <= c_max_uM")
+    if dilution_factor <= 1:
+        raise ValueError("dilution_factor must be greater than 1")
+    if isinstance(n_points, bool) or not isinstance(n_points, int) or not 1 <= n_points <= 12:
+        raise ValueError("n_points must be an integer from 1 to 12 for a 96-well plate")
     variants = variants[:len(ROWS)]
-    contrasts = [float(v["contrast"]) for v in variants]
+    if any(not isinstance(v, dict) or not isinstance(v.get("candidate_id"), str)
+           or not v["candidate_id"].strip() for v in variants):
+        raise ValueError("each variant must include a nonempty candidate_id")
+    contrasts = [_finite_number(v.get("contrast"), "variant contrast") for v in variants]
     lo, hi = min(contrasts), max(contrasts)
     rows = []
-    for i, v in enumerate(variants):
-        start = starting_concentration(float(v["contrast"]), lo, hi, c_max_uM, c_min_uM)
+    for i, (v, contrast) in enumerate(zip(variants, contrasts)):
+        start = starting_concentration(contrast, lo, hi, c_max_uM, c_min_uM)
+        nominal, value = [], start
+        for _ in range(n_points):
+            value /= dilution_factor
+            if not math.isfinite(value) or value <= 0:
+                raise ValueError("dilution series exceeds the supported positive numeric range")
+            nominal.append(value)
         rows.append({
             "row": ROWS[i], "candidate_id": v["candidate_id"], "name": v.get("name", v["candidate_id"]),
-            "contrast": v["contrast"], "start_uM": round(start, 4),
-            "nominal_uM": [round(start / dilution_factor ** k, 8) for k in range(1, n_points + 1)],
+            "contrast": contrast, "start_uM": start,
+            "nominal_uM": nominal,
         })
     return {
         "unit": "uM",
@@ -89,22 +135,23 @@ def map_starting_concentrations(variants: List[Dict[str, Any]], c_max_uM: float 
         "params": {"c_max_uM": c_max_uM, "c_min_uM": c_min_uM, "dilution_factor": dilution_factor,
                    "n_points": n_points},
         "formula": "start = c_max * (c_min/c_max) ** ((contrast - min) / (max - min)); higher contrast -> lower start",
-        "note": "Heuristic TEA gate: LanM ranks by published Nd/La-style profile contrast and has no concentrations; "
-                "starting concentrations are scaled from that contrast, for the scientist to review.",
+        "note": "Heuristic assay concentration mapping: starting concentrations are scaled from published screening "
+                "contrast for the scientist to review. Screening contrast does not establish a required dose, "
+                "recovery, capacity, or cost. This mapping is not a techno-economic model.",
     }
 
 
 def assay_context(plate_map: Dict[str, Any]) -> str:
-    """The plate map in words, appended to the SOP so PreCheck drafts the plate the TEA gate laid out."""
+    """The plate map in words, appended to the SOP so PreCheck drafts the planned assay."""
     p = plate_map["params"]
     lines = [
         "",
-        "ASSAY CONTEXT (from the ARGUS TEA gate, for the LLNL SpyCI-LAMBS assay):",
+        "ASSAY CONTEXT (from the ARGUS assay concentration mapping, for the LLNL SpyCI-LAMBS assay):",
         f"- One LanM variant per plate row; the sample to dilute in each row is that variant's stock. "
         f"Do a 1:{p['dilution_factor']:g} serial dilution across columns 1 to {p['n_points']} of a 96-well plate.",
         "- Row stocks (starting concentrations):",
     ]
-    lines += [f"  row {r['row']}: {r['name']} at {r['start_uM']:.3g} uM" for r in plate_map["rows"]]
+    lines += [f"  row {r['row']}: {r['name']} at {r['start_uM']!r} uM" for r in plate_map["rows"]]
     lines.append("- Use 8 channels so each row gets its own variant; keep every other detail of the SOP above.")
     return "\n".join(lines)
 

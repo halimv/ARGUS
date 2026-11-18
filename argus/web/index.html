@@ -13,6 +13,7 @@
     <span class="sub">LanM selection → SOP translation → reviewed STARlet simulation · SpyCI-LAMBS</span>
   </div>
   <div class="top-right">
+    <a id="researchWorkspaceLink" class="workspace-link" href="/lanm" target="_blank" rel="noopener noreferrer" title="Open the full Research and Build workspace">Research workspace ↗</a>
     <span id="status" class="pill">idle</span>
     <span id="cost" class="muted small"></span>
   </div>
@@ -21,6 +22,9 @@
 <main class="layout">
   <aside class="left">
     <form id="form" class="card">
+      <div class="row-between"><label class="lbl" for="lanmProject">Research project</label><button id="refreshProjects" type="button" class="small">Refresh</button></div>
+      <select id="lanmProject"><option value="">Create a new project from this request</option></select>
+      <p class="muted small">Select a project created in the research workspace to use its records and metal pair. Ranking saves a result; it does not change project inputs.</p>
       <label class="lbl" for="prompt">Request</label>
       <textarea id="prompt" rows="5" placeholder="What should ARGUS do?"></textarea>
       <div class="row-between">
@@ -32,6 +36,7 @@
         <label class="check"><input id="offline" type="checkbox"> Offline (no model, fixture protocol)</label>
         <button id="go" type="submit" class="primary">Run</button>
       </div>
+      <p id="protocolSetup" class="muted small" role="status">Checking protocol setup…</p>
     </form>
 
     <section class="card timeline-card">
@@ -42,7 +47,7 @@
 
   <section class="right">
     <nav class="tabs" role="tablist">
-      <button class="tab active" data-tab="variants">1 · Variants &amp; TEA gate</button>
+      <button class="tab active" data-tab="variants">1 · Variants &amp; assay map</button>
       <button class="tab" data-tab="review">2 · Review <span id="reviewDot" class="dot hidden"></span></button>
       <button class="tab" data-tab="simulation">3 · AHC simulation</button>
       <button class="tab" data-tab="code">PLR script</button>

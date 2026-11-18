@@ -1,7 +1,7 @@
 [project]
 name = "argus"
 version = "0.1.0"
-description = "ARGUS: one prompt from LanM variant selection (TEA gate) to a reviewed, simulated Hamilton STARlet protocol"
+description = "ARGUS: one prompt from LanM variant selection (assay concentration mapping) to a reviewed, simulated Hamilton STARlet protocol"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "ahc",

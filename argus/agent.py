@@ -22,8 +22,8 @@ argus tools, in this order:
 
 1. rank_variants: the top LanM variants from the LanM research platform (target metal over competitor; default Nd \
 over La, 8 variants, one per plate row, unless the scientist says otherwise).
-2. map_starting_concentrations: the TEA gate. Each variant gets a plate row and a starting concentration scaled by \
-its selectivity contrast (defaults 100 uM to 10 uM, 1:10 steps, 6 points, unless the scientist says otherwise).
+2. map_starting_concentrations: assay concentration mapping. Each variant gets a plate row and a starting concentration scaled by \
+its published screening contrast (defaults 100 uM to 10 uM, 1:10 steps, 6 points, unless the scientist says otherwise).
 3. translate_sop: PreCheck turns the uploaded SOP (plus the plate map) into a Hamilton protocol, repairs it until it \
 passes the instrument's simulator, and guards the experimental intent. Then AHC checks the labware: its simulator \
 loads PreCheck's deck, and anything AHC cannot load or that would run too shallow goes back to PreCheck to fix. Tell \
@@ -37,7 +37,13 @@ Rules:
 - Between tool calls, write one or two plain sentences to the scientist about what you found. No markdown tables.
 - Report what PreCheck flagged as must-review, and any AHC refusal, in the tool's own terms. A refusal is a finding: \
 do not try to work around it.
-- Do not invent numbers: use only what the tools return. The TEA concentrations are a heuristic, so say so once.
+- Do not invent numbers: use only what the tools return. The assay concentrations are a heuristic, so say so once.
+- Screening contrast is not a separation factor or a demonstrated dose requirement. Assay concentration mapping \
+does not evaluate process costs. The full LanM research workspace provides separate economic models, \
+Research/Build chat and registered methods; this protocol assistant uses the narrower automation tools.
+- If this run names a LanM project, use its declared target/competitor pair. Never change its inputs to fit a \
+contradictory request; explain the mismatch and ask for a new run or corrected request.
+- Once a protocol exists, changing the ranked variants or assay map requires a new run.
 - Everything here is simulation. Never suggest that anything ran on a real instrument.
 - If translate_sop returns NOT_READY, explain the failure and ask the scientist what to change."""
 
@@ -56,7 +62,7 @@ def build_server(run: Run):
         except Exception as e:  # the agent sees the refusal and the UI already showed it
             return _text(f"{type(e).__name__}: {e}", is_error=True)
 
-    @tool("rank_variants", "Rank LanM variants by published selectivity contrast of target over competitor metal "
+    @tool("rank_variants", "Rank LanM variants by published screening contrast of target over competitor metal "
           "(LanM research platform). Returns the top variants.",
           {"type": "object", "properties": {
               "target": {"type": "string", "description": "Target rare-earth element symbol, e.g. Nd"},
@@ -67,17 +73,19 @@ def build_server(run: Run):
         return await call(run.rank_variants, target=args["target"], competitor=args["competitor"],
                           top_n=int(args["top_n"]))
 
-    @tool("map_starting_concentrations", "TEA gate: give each ranked variant a plate row and a starting "
+    @tool("map_starting_concentrations", "Assay concentration mapping: give each ranked variant a plate row and a starting "
           "concentration scaled by its contrast (higher contrast -> lower start), log-interpolated between c_max and "
           "c_min, with a serial dilution across columns.",
           {"type": "object", "properties": {
-              "c_max_uM": {"type": "number"}, "c_min_uM": {"type": "number"},
-              "dilution_factor": {"type": "number"}, "n_points": {"type": "integer"}},
+              "c_max_uM": {"type": "number", "exclusiveMinimum": 0},
+              "c_min_uM": {"type": "number", "exclusiveMinimum": 0},
+              "dilution_factor": {"type": "number", "exclusiveMinimum": 1},
+              "n_points": {"type": "integer", "minimum": 1, "maximum": 12}},
            "required": []})
     async def map_starting_concentrations(args):
         kw = {k: args[k] for k in ("c_max_uM", "c_min_uM", "dilution_factor") if args.get(k) is not None}
         if args.get("n_points") is not None:
-            kw["n_points"] = int(args["n_points"])
+            kw["n_points"] = args["n_points"]
         return await call(run.map_starting_concentrations, **kw)
 
     @tool("translate_sop", "PreCheck: translate the uploaded SOP (with the plate map as assay context) into a Hamilton "
@@ -117,7 +125,11 @@ def build_server(run: Run):
 
 
 def first_message(run: Run) -> str:
-    return (f"{run.prompt.strip()}\n\n"
+    project = run.lanm_project
+    context = (f"Selected LanM project: {project['name']} ({project['id']}), "
+               f"target {project['target']}, competitor {project['competitor']}. "
+               "Use this project for ranking without changing its inputs.\n\n") if project else ""
+    return (f"{context}{run.prompt.strip()}\n\n"
             f"The SOP the scientist uploaded ({run.sop_name}) is attached to this run; translate_sop uses it as is. "
             f"Its text, for your reference:\n<sop>\n{run.sop_text.strip()}\n</sop>")
 
@@ -164,7 +176,7 @@ METAL = re.compile(r"\b(Y|La|Ce|Pr|Nd|Pm|Sm|Eu|Gd|Tb|Dy|Ho|Er|Tm|Yb|Lu)\b")
 
 
 async def drive_offline(run: Run) -> None:
-    """The same tools in the same order with no model: rank, TEA gate, the fixture protocol, review, simulate."""
+    """The same tools in the same order with no model: rank, assay concentration mapping, the fixture protocol, review, simulate."""
     metals = METAL.findall(run.prompt)
     target = metals[0] if metals else "Nd"
     competitor = metals[1] if len(metals) > 1 else ("La" if target != "La" else "Nd")

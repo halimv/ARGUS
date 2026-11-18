@@ -1,6 +1,7 @@
 """Where ARGUS finds its three systems and where it writes.
 
-The submodules are read only. Everything a run writes goes under ARGUS/workspace/:
+The submodules are read only. Default storage is ARGUS/workspace/; an explicit
+ARGUS_LANM_DATA_DIR can select an existing research directory without copying it:
   workspace/lanm/        LanM's SQLite store (ranking runs, projects)
   workspace/precheck/    PreCheck's working folder (drafts/, decks/, build/, healed/, runs/, knowledge/)
   workspace/runs/<id>/   one ARGUS run: its AHC task folder and a run.json snapshot
@@ -20,7 +21,11 @@ PRECHECK_FIXTURES = ROOT / "PreCheck" / "tests" / "fixtures"
 DEFAULT_SOP = ROOT / "PreCheck" / "files" / "input.txt"
 
 WORKSPACE = Path(os.environ.get("ARGUS_WORKSPACE") or ROOT / "workspace").resolve()
-LANM_DATA = WORKSPACE / "lanm"
+LANM_DATA_EXPLICIT = bool(os.environ.get("ARGUS_LANM_DATA_DIR"))
+LANM_DATA = Path(os.environ.get("ARGUS_LANM_DATA_DIR") or WORKSPACE / "lanm").expanduser().resolve()
+LANM_PORT = int(os.environ.get("ARGUS_LANM_PORT", "0"))
+if not 0 <= LANM_PORT <= 65535:
+    raise ValueError("ARGUS_LANM_PORT must be between 0 and 65535 (0 chooses a free local port)")
 PRECHECK_WORK = WORKSPACE / "precheck"
 RUNS = WORKSPACE / "runs"
 
@@ -40,8 +45,10 @@ def setup() -> None:
     global _done
     if _done:
         return
-    for folder in (LANM_DATA, PRECHECK_WORK, RUNS):
+    for folder in (PRECHECK_WORK, RUNS):
         folder.mkdir(parents=True, exist_ok=True)
+    # Align profile/tool discovery inside this process, never global settings.
+    os.environ["LANM_DATA_DIR"] = str(LANM_DATA)
     os.environ.setdefault("PRECHECK_WORKDIR", str(PRECHECK_WORK))
     for path in (LANM_SRC, PRECHECK_PLUGIN):
         if str(path) not in sys.path:

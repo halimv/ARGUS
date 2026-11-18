@@ -103,7 +103,7 @@ def test_design_check_catches_bench_work_and_ratio_drift():
                 s["action"] == "dispense" and s.get("volume_ul") == 90):
             s["volume_ul"] = 100
     probs = labware.design_problems(bad, _plate_map())
-    assert any("TEA plate map" in p and "column 1" in p for p in probs)
+    assert any("assay plate map" in p and "column 1" in p for p in probs)
     pre = json.loads(json.dumps(ir))
     pre["initial_volumes_ul"]["dilution_plate:A2:H2"] = 90
     assert any("pre-filled by hand" in p and "A2:H2" in p for p in labware.design_problems(pre, _plate_map()))

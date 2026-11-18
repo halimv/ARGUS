@@ -13,10 +13,31 @@ function showTab(name) {
 }
 
 // ---------------------------------------------------------------- start
+fetch("/api/lanm-workspace").then((r) => {
+  if (!r.ok) throw new Error("The research workspace is unavailable. Check the ARGUS server output.");
+  return r.json();
+}).then((d) => {
+  $("researchWorkspaceLink").title = "Research and Build use the same data as ARGUS ranking. Opens in a separate tab.";
+}).catch((error) => { $("researchWorkspaceLink").title = error.message; });
+async function refreshProjects(selected) {
+  const current = selected ?? $("lanmProject").value;
+  const response = await fetch("/api/lanm-projects");
+  if (!response.ok) return;
+  const data = await response.json();
+  $("lanmProject").replaceChildren(new Option("Create a new project from this request", ""));
+  for (const project of data.projects) {
+    $("lanmProject").add(new Option(`${project.name} · ${project.target}/${project.competitor}`, project.id));
+  }
+  $("lanmProject").value = current;
+}
+$("refreshProjects").addEventListener("click", () => refreshProjects().catch(() => {}));
+refreshProjects().catch(() => {});
 fetch("/api/defaults").then((r) => r.json()).then((d) => {
   if (!$("prompt").value) $("prompt").value = d.prompt;
   if (!$("sop").value) { $("sop").value = d.sop_text; $("sopName").textContent = d.sop_name; }
   $("cost").textContent = "agent: " + d.model;
+  $("protocolSetup").textContent = d.protocol_setup.note;
+  if (!d.protocol_setup.available) { $("go").disabled = true; $("go").title = d.protocol_setup.note; }
 });
 $("sopFile").addEventListener("change", async (e) => {
   const f = e.target.files[0]; if (!f) return;
@@ -25,7 +46,7 @@ $("sopFile").addEventListener("change", async (e) => {
 $("form").addEventListener("submit", async (e) => {
   e.preventDefault();
   $("go").disabled = true;
-  const body = { prompt: $("prompt").value, sop_text: $("sop").value, sop_name: $("sopName").textContent || "pasted SOP", offline: $("offline").checked };
+  const body = { prompt: $("prompt").value, sop_text: $("sop").value, sop_name: $("sopName").textContent || "pasted SOP", offline: $("offline").checked, project_id: $("lanmProject").value || null };
   const r = await fetch("/api/runs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) { alert((await r.json()).detail || "Could not start"); $("go").disabled = false; return; }
   const { id } = await r.json();
@@ -35,7 +56,7 @@ $("form").addEventListener("submit", async (e) => {
 if (location.hash.length > 1) {
   const id = location.hash.slice(1);
   fetch("/api/runs/" + id).then((r) => (r.ok ? r.json() : null)).then((s) => {
-    if (s) { $("prompt").value = s.prompt; $("sop").value = s.sop_text; $("sopName").textContent = s.sop_name; attach(id, s); }
+    if (s) { $("prompt").value = s.prompt; $("sop").value = s.sop_text; $("sopName").textContent = s.sop_name; refreshProjects(s.project_id || "").catch(() => {}); attach(id, s); }
   });
 }
 
@@ -134,6 +155,14 @@ function fmt(uM) {
   return uM.toExponential(1) + " µM";
 }
 function renderPlateMap(pm) {
+  if (!pm) {
+    window.__plateMap = null;
+    $("plateCard").classList.add("hidden");
+    $("plateMap").innerHTML = "";
+    $("pmFormula").textContent = $("pmNote").textContent = "";
+    return;
+  }
+  $("plateCard").classList.remove("hidden");
   const cols = pm.columns;
   const all = pm.rows.flatMap((r) => [r.start_uM, ...r.nominal_uM]);
   const lo = Math.min(...all), hi = Math.max(...all);
@@ -176,7 +205,7 @@ function renderProtocol(p) {
   const pm = window.__plateMap;
   if (pm) {
     $("assayCtx").classList.remove("hidden");
-    $("assayCtx").textContent = "PreCheck also got the TEA gate's plate map: one variant per row\n" + pm.rows.map((r) => `  ${r.row}: ${r.name} at ${fmt(r.start_uM)}`).join("\n");
+    $("assayCtx").textContent = "PreCheck also got the assay plate map: one variant per row\n" + pm.rows.map((r) => `  ${r.row}: ${r.name} at ${fmt(r.start_uM)}`).join("\n");
   }
   $("steps").innerHTML = p.readable_steps.map((s) => `
     <li>
@@ -229,7 +258,7 @@ function renderLabwareCheck(lc) {
         : r.dry_run && r.dry_run.ok ? `<span class="tick">AHC ran every step (${r.dry_run.calls} calls)</span>`
         : `<span class="cross">AHC refused IR step ${esc((r.dry_run.refusal || {}).ir_step)} after ${r.dry_run.calls} calls</span><div class="small mono">${esc((r.dry_run.refusal || {}).message || "")}</div>`}
       ${r.suggestion ? `<div class="small"><b>AHC suggests:</b> ${esc(r.suggestion.text)}</div>` : ""}
-      ${(r.design_problems || []).length ? `<div class="small"><b>TEA plate map / robot work:</b><ul class="plain small">${r.design_problems.map((d) => `<li class="cross">${esc(d)}</li>`).join("")}</ul></div>` : ""}
+      ${(r.design_problems || []).length ? `<div class="small"><b>assay plate map / robot work:</b><ul class="plain small">${r.design_problems.map((d) => `<li class="cross">${esc(d)}</li>`).join("")}</ul></div>` : ""}
       ${r.not_on_layout.length ? `<ul class="plain small">${r.not_on_layout.map((x) => `<li class="cross">${esc(x)}</li>`).join("")}</ul>` : ""}
       <ul class="plain small">${r.actions.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>
     </li>`).join("");

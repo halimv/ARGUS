@@ -243,7 +243,7 @@ def structural_problems(check: Dict[str, Any], fixed: Dict[str, float]) -> List[
 
 def design_problems(ir: Dict[str, Any], plate_map: Optional[Dict[str, Any]], tol: float = 0.02) -> List[str]:
     """What PreCheck's intent guard cannot see, because it protects the draft and here the draft itself is off: the
-    TEA plate map's concentrations (every well, from the protocol's own steps, within `tol`), and the robot's work
+    assay plate map's concentrations (every well, from the protocol's own steps, within `tol`), and the robot's work
     (pre-filled wells are sources the steps draw from, never wells the steps transfer into)."""
     from pipeline.deck import loaded_wells
 
@@ -278,7 +278,7 @@ def design_problems(ir: Dict[str, Any], plate_map: Optional[Dict[str, Any]], tol
                 if got is None or abs(got - want) > tol * want:
                     shown = lanm.format_uM(got) if got else "no variant"
                     problems.append(
-                        f"column {col} row {r['row']} ends at {shown} of {r['name']} where the TEA plate map has "
+                        f"column {col} row {r['row']} ends at {shown} of {r['name']} where the assay plate map has "
                         f"{lanm.format_uM(want)} (stock {lanm.format_uM(r['start_uM'])} diluted 1:{df:g} into column 1, "
                         f"then 1:{df:g} per column): a 1:{df:g} step is 1 part sample to {df - 1:g} parts diluent")
                     break  # one row per column is enough to say what is wrong
@@ -289,7 +289,7 @@ def design_problems(ir: Dict[str, Any], plate_map: Optional[Dict[str, Any]], tol
 
 def revision_note(problems: List[str]) -> str:
     return ("AHC (the controller that runs this protocol on the STARlet, on its simulator) and ARGUS's check against "
-            "the TEA plate map and the scientist's request found:\n"
+            "the assay plate map and the scientist's request found:\n"
             + "\n".join(f"- {p}" for p in problems) +
             "\n\nChange the plan so AHC can run it. Use only this labware from the lab's library, which AHC loads:\n"
             + options_text() +

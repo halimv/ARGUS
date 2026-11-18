@@ -1,11 +1,13 @@
 """argus serve                 the web app (http://127.0.0.1:8780)
-argus demo --offline        the whole chain in the terminal with no model: rank, TEA gate, fixture protocol,
+argus demo --offline        the whole chain in the terminal with no model: rank, assay concentration mapping, fixture protocol,
                             auto-approval as "offline-demo", AHC simulation
 """
 
 import argparse
 import asyncio
 import json
+import os
+from pathlib import Path
 
 
 def _demo(prompt: str) -> int:
@@ -45,17 +47,26 @@ def _demo(prompt: str) -> int:
     return asyncio.run(go())
 
 
-def main() -> None:
+def main(argv=None) -> None:
     parser = argparse.ArgumentParser(prog="argus")
     sub = parser.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("serve", help="start the web app")
     s.add_argument("--port", type=int, default=8780)
     s.add_argument("--no-browser", action="store_true")
+    s.add_argument("--lanm-data-dir", type=Path,
+                   help="use an existing LanM research-data directory without restoring over it")
+    s.add_argument("--lanm-port", type=int, help="full LanM workspace port (default: a free loopback port)")
     d = sub.add_parser("demo", help="run the chain in the terminal")
     d.add_argument("--offline", action="store_true", required=True, help="no model (the only demo mode)")
     d.add_argument("--prompt", default="Top 8 LanM variants for Nd over La, serial dilution, simulate it.")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.cmd == "serve":
+        if args.lanm_data_dir is not None:
+            os.environ["ARGUS_LANM_DATA_DIR"] = str(args.lanm_data_dir.expanduser().resolve())
+        if args.lanm_port is not None:
+            if not 0 <= args.lanm_port <= 65535:
+                parser.error("--lanm-port must be between 0 and 65535")
+            os.environ["ARGUS_LANM_PORT"] = str(args.lanm_port)
         from argus.server import serve
         serve(port=args.port, open_browser=not args.no_browser)
     else:
