@@ -43,6 +43,10 @@ function attach(id, body) {
   runId = id; sopText = body.sop_text; toolEls = {}; lastProgress = null;
   $("runId").textContent = id;
   $("timeline").innerHTML = "";
+  callN = 0;
+  ["playback", "gifLink", "gifPreview", "simSummary"].forEach((k) => $(k).classList.add("hidden"));
+  $("viewMode").textContent = "live"; $("viewMode").className = "pill";
+  $("gifBtn").disabled = $("replayBtn").disabled = false;
   addLi(`<div class="msg user">${esc(body.prompt)}</div>`);
   if (source) source.close();
   source = new EventSource(`/api/runs/${id}/events?after=-1`);
@@ -273,10 +277,51 @@ function showView(url) {
   if ($("view3d").getAttribute("src") !== url) $("view3d").setAttribute("src", url);
   showTab("simulation");
 }
+// Playback of the run's 3D recording, and its GIF (made by the viewer's own recorder, saved by ARGUS).
+function playback(record) {
+  const speed = record ? 2 : Number($("replaySpeed").value);
+  const url = `/viewer/?run=${runId}&speed=${speed}${record ? "&record=1" : ""}&t=${Date.now()}`;
+  $("viewMode").textContent = record ? "recording GIF" : `replay ${speed}×`;
+  $("viewMode").className = "pill warn";
+  $("playbackMsg").textContent = record ? "Replaying at 2× and recording; keep this tab open until the GIF is saved." : "";
+  $("gifBtn").disabled = $("replayBtn").disabled = true;
+  showView(url);
+  $("viewLink").href = url.replace("&record=1", "");
+}
+async function showGif(fresh) {
+  const url = `/api/runs/${runId}/gif?t=${Date.now()}`;
+  $("gifLink").href = url; $("gifLink").setAttribute("download", `argus-${runId}.gif`);
+  $("gifLink").classList.remove("hidden");
+  $("gifPreview").src = url; $("gifPreview").classList.remove("hidden");
+  if (fresh) $("playbackMsg").textContent = "GIF saved with this run.";
+}
+async function enablePlayback() {
+  const r = await fetch(`/api/runs/${runId}/replay`);
+  if (!r.ok) return;
+  const info = await r.json();
+  $("playback").classList.remove("hidden");
+  $("playbackMsg").textContent = `Recorded ${info.duration_s.toFixed(0)} s of the run.`;
+  if (info.gif) showGif(false);
+}
+$("replayBtn").addEventListener("click", () => playback(false));
+$("gifBtn").addEventListener("click", () => playback(true));
+window.addEventListener("message", (e) => {
+  if (e.origin !== location.origin || !e.data || !e.data.argus) return;
+  const k = e.data.kind;
+  if (k === "replay-end" || k === "gif-saved" || k === "gif-failed") {
+    if (k !== "replay-end" || !$("viewMode").textContent.startsWith("recording")) {
+      $("gifBtn").disabled = $("replayBtn").disabled = false;
+      $("viewMode").textContent = "replay done"; $("viewMode").className = "pill";
+    }
+  }
+  if (k === "gif-saved") showGif(true);
+  if (k === "gif-failed") $("playbackMsg").textContent = "The GIF could not be saved: " + e.data.message;
+});
 function renderSimulation(s) {
   $("simEmpty").classList.add("hidden"); $("simBody").classList.remove("hidden");
   $("simSummary").classList.remove("hidden");
   if (s.view_url) showView(s.view_url);
+  if (s.recording) enablePlayback();
   const comp = s.comparison;
   $("simSummary").innerHTML = `
     <div class="row-between"><h2>${s.passed ? "Simulation passed" : "Simulation did not pass"}</h2><span class="pill ${s.passed ? "ok" : "bad"}">${s.passed ? "PASS" : "FAIL"}</span></div>

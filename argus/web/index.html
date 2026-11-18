@@ -108,9 +108,19 @@
       <div id="simEmpty" class="placeholder">After you approve, the protocol runs on AHC's simulated Hamilton STARlet. Its calls stream here.</div>
       <div id="simBody" class="hidden">
         <div id="viewCard" class="card hidden">
-          <div class="row-between"><h2>Live deck · PyLabRobot 3D</h2><a id="viewLink" class="muted small" target="_blank" rel="noopener">open in its own tab ↗</a></div>
-          <p class="muted small">AHC's simulated STARlet, drawn from the digital twin's state: tips leave the rack and wells fill as each call runs. Drag to orbit, scroll to zoom.</p>
+          <div class="row-between"><h2>Deck · PyLabRobot 3D <span id="viewMode" class="pill">live</span></h2><a id="viewLink" class="muted small" target="_blank" rel="noopener">open in its own tab ↗</a></div>
+          <p class="muted small">AHC's simulated STARlet, drawn from the digital twin's state: tips leave the rack and wells fill as each call runs. The heads (96-head, channels, gripper) are docked at the right. Drag to orbit, scroll to zoom.</p>
           <iframe id="view3d" class="view3d" title="3D view of the simulated STARlet deck"></iframe>
+          <div id="playback" class="playback hidden">
+            <button id="replayBtn" class="secondary">▶ Replay run</button>
+            <label class="small muted">speed
+              <select id="replaySpeed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+            </label>
+            <button id="gifBtn" class="secondary">● Record GIF</button>
+            <a id="gifLink" class="small hidden" download>⬇ Download GIF</a>
+            <span id="playbackMsg" class="small muted"></span>
+          </div>
+          <img id="gifPreview" class="gif-preview hidden" alt="GIF of the simulated run">
         </div>
         <div id="simSummary" class="card hidden"></div>
         <div class="card">

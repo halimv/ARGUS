@@ -26,7 +26,11 @@ A protocol AHC still refuses after three rounds is marked NOT READY and can't be
 
 These come from an offline run of `PreCheck/files/input.txt`.
 
-**AHC simulation, live 3D deck.** The approved protocol runs on AHC's simulated STARlet, and PyLabRobot's 3D viewer draws the deck as each call moves tips and liquid.
+**The simulated run, recorded as a GIF from ARGUS.** Every AHC call of the approved serial dilution runs on the simulated STARlet. Tips leave the rack, saline and stocks fill the plate, and the series moves across columns 1 to 6. The GIF is played back at 2×.
+
+![GIF of the serial dilution running on AHC's simulated STARlet](docs/screenshots/simulation-run.gif)
+
+**AHC simulation, live 3D deck.** PyLabRobot's 3D viewer draws the deck as each call moves tips and liquid. The head panels (96-head, the 8 channels, the gripper) are docked at the right edge so the whole machine stays in view.
 
 ![AHC simulation tab with the live PyLabRobot 3D deck](docs/screenshots/3-simulation.png)
 
@@ -65,6 +69,9 @@ The page opens with `PreCheck/files/input.txt` (a 1:10 serial dilution) and an e
   - Every AHC call streams in as it runs.
   - Final plate volumes are shown against PreCheck's expected volumes.
   - The run pauses 0.5 s after each call (`ARGUS_SIM_PACE_S`) so it can be watched. `ARGUS_3D=0` turns the 3D view off.
+  - The head panels are docked in a column at the right edge, smaller, instead of over the deck.
+  - Each run is recorded. After it ends, **Replay run** plays it again in 3D at 0.5× to 4×, and you can orbit and zoom while it plays.
+  - **Record GIF** replays the run at 2× through the viewer's own GIF recorder. ARGUS saves it with the run (`workspace/runs/<id>/ahc/run.gif`), offers it to download, and shows it below the view. Keep the tab open while it records, because a hidden tab stops drawing.
 - **PLR script:** PreCheck's standalone PyLabRobot script.
 
 **Offline mode** (the checkbox, or `uv run argus demo --offline` in a terminal):
@@ -98,10 +105,11 @@ argus/
   tools/lanm.py      LanM Store.rank + the TEA gate + concentrations from a protocol
   tools/precheck.py  PreCheck's draft -> heal ladder -> finish chain, the fixture path, readable steps
   tools/ahc_sim.py   IR -> AHC calls; AHC's server in-process (sim, hamilton.starlet) via an MCP client
+  viewer.py          PyLabRobot's 3D viewer served by ARGUS: live, recorded during a run, replayed over a websocket
   run.py             one run: tool implementations, review gate, event stream
   agent.py           Claude Agent SDK, in-process MCP server "argus"; no built-in tools; the offline driver
   server.py          FastAPI + server-sent events
-  web/               the page (no build step)
+  web/               the page (no build step); viewer_embed.js docks the heads and drives the viewer's GIF recorder
 ```
 
 - **Read-only submodules:** ARGUS never writes into the submodules. Everything goes to `workspace/`, which is git-ignored:

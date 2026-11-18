@@ -113,6 +113,7 @@ async def simulate(ir: Dict[str, Any], layout_file: Path, folder: Path, reviewer
             await emit(kind, data)
 
     server = create_server(folder, "sim", "hamilton.starlet")
+    recorder = None
     if view is not None:
         server.lab.view = view  # AHC's load_layout puts its STARlet in this view and the twin's tracking drives it
     result: Dict[str, Any] = {"device": "hamilton.starlet (simulated)", "task_folder": str(folder),
@@ -139,8 +140,12 @@ async def simulate(ir: Dict[str, Any], layout_file: Path, folder: Path, reviewer
                                                        f"simulation, approved by {reviewer}", "plan": plan})
             await call("load_layout", {"layout": layout, "plan_step": 1})
             if view is not None and view.url:
-                result["view_url"] = view.url
-                await note("ahc_view", {"url": view.url})
+                from argus.viewer import Recorder
+
+                recorder = Recorder(view, folder)
+                await recorder.start()  # from the deck as loaded: playback shows the whole run
+                result["view_url"] = "/viewer/?live=1"  # ARGUS serves the viewer's page (argus/viewer.py)
+                await note("ahc_view", {"url": result["view_url"]})
                 if pace_s > 0:  # give the page a moment to connect, so it shows the run from its first tip
                     await view.wait_for_browser(8)
             deck = await call("verify", {"check": "deck_matches_layout", "plan_step": 1})
@@ -175,6 +180,9 @@ async def simulate(ir: Dict[str, Any], layout_file: Path, folder: Path, reviewer
                                  "message": e.text}
         finally:
             server.lab.view = None  # AHC's shutdown stops its view; this one outlives the simulation (final deck stays)
+    if recorder is not None:
+        saved = await recorder.stop()
+        result["recording"] = saved.name if saved else None
     result["expected_ul"] = expected
     result["comparison"] = compare(expected, result.get("final_liquids_ul", {}))
     result["passed"] = (result["refusal"] is None and result["comparison"]["mismatches"] == 0

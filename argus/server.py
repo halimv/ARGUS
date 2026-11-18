@@ -5,6 +5,11 @@
   GET  /api/runs/{id}/events?after=n  server-sent events from event n on
   POST /api/runs/{id}/review          {decision: approve|revise, reviewer, note}
   GET  /api/defaults                  the default SOP (PreCheck/files/input.txt) and an example prompt
+  GET  /viewer/?live=1                PyLabRobot's 3D viewer on the live AHC simulation
+  GET  /viewer/?run={id}&speed=s      the same viewer playing back a run's recording (&record=1: and make a GIF)
+  GET  /api/runs/{id}/replay          the recording's length, and whether a GIF was made
+  WS   /api/runs/{id}/replay/ws       the recording, timed, as the viewer's own messages
+  GET/POST /api/runs/{id}/gif         the run's GIF (posted by the viewer page once it has rendered it)
 """
 
 import asyncio
@@ -12,12 +17,12 @@ import json
 from pathlib import Path
 from typing import Dict, Optional
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import FastAPI, HTTPException, Request, WebSocket
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from argus import config
+from argus import config, viewer
 from argus.agent import drive_live, drive_offline
 from argus.run import Run, ToolRefused
 
@@ -50,6 +55,81 @@ def index():
 
 
 app.mount("/static", StaticFiles(directory=WEB), name="static")
+
+
+# ------------------------------------------------------------------------------------------------ 3D viewer
+@app.get("/viewer")
+def viewer_root(request: Request):
+    return RedirectResponse(f"/viewer/?{request.url.query}")
+
+
+@app.get("/viewer/", response_class=HTMLResponse)
+def viewer_page(run: str = "", speed: float = 1.0, live: int = 0, record: int = 0):
+    if live or not run:
+        from argus.tools import ahc_sim
+        view = ahc_sim._VIEW
+        if view is None or view.viewer is None:
+            raise HTTPException(404, "No live 3D view yet: it starts with the first AHC simulation.")
+        return viewer.page(view.viewer.ws_url, "ARGUS · AHC live", "live")
+    info = viewer.recording_info(run)
+    if info is None:
+        raise HTTPException(404, "This run has no 3D recording.")
+    return viewer.page(f"/api/runs/{run}/replay/ws?speed={speed:g}", f"ARGUS · replay {run}", "replay", run,
+                       info["duration_s"] / max(speed, 0.1), bool(record))
+
+
+@app.get("/viewer/mesh/{mesh_id}")
+def viewer_mesh(mesh_id: str):
+    path = viewer.mesh_file(mesh_id)
+    if path is None or not path.exists():
+        raise HTTPException(404)
+    return FileResponse(path, media_type="model/gltf-binary")
+
+
+@app.get("/viewer/{path:path}")
+def viewer_static(path: str):
+    root = viewer.static_dir().resolve()
+    target = (root / path).resolve()
+    if root not in target.parents or not target.is_file():
+        raise HTTPException(404)
+    return FileResponse(target, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api/runs/{run_id}/replay")
+def replay_info(run_id: str):
+    info = viewer.recording_info(run_id)
+    if info is None:
+        raise HTTPException(404, "This run has no 3D recording.")
+    return info
+
+
+@app.websocket("/api/runs/{run_id}/replay/ws")
+async def replay_ws(ws: WebSocket, run_id: str, speed: float = 1.0):
+    await ws.accept()
+    if viewer.recording_info(run_id) is None:
+        await ws.close(code=4404)
+        return
+    await viewer.replay(ws, run_id, speed)
+
+
+@app.post("/api/runs/{run_id}/gif")
+async def save_gif(run_id: str, request: Request):
+    folder = viewer.recording_path(run_id).parent
+    if not folder.exists():
+        raise HTTPException(404, "No such run.")
+    body = await request.body()
+    if not body.startswith(b"GIF8"):
+        raise HTTPException(400, "Not a GIF.")
+    (folder / viewer.GIF).write_bytes(body)
+    return {"saved": True, "bytes": len(body)}
+
+
+@app.get("/api/runs/{run_id}/gif")
+def get_gif(run_id: str):
+    path = viewer.recording_path(run_id).parent / viewer.GIF
+    if not path.exists():
+        raise HTTPException(404, "No GIF for this run yet.")
+    return FileResponse(path, media_type="image/gif", filename=f"argus-{run_id}.gif")
 
 
 @app.get("/api/defaults")
