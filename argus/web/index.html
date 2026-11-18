@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARGUS</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="logo">ARGUS</span>
+    <span class="sub">LanM selection → SOP translation → reviewed STARlet simulation · SpyCI-LAMBS</span>
+  </div>
+  <div class="top-right">
+    <span id="status" class="pill">idle</span>
+    <span id="cost" class="muted small"></span>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="left">
+    <form id="form" class="card">
+      <label class="lbl" for="prompt">Request</label>
+      <textarea id="prompt" rows="5" placeholder="What should ARGUS do?"></textarea>
+      <div class="row-between">
+        <label class="lbl" for="sop">SOP <span id="sopName" class="muted small"></span></label>
+        <label class="file-btn">Upload…<input id="sopFile" type="file" accept=".txt,.md,text/plain" hidden></label>
+      </div>
+      <textarea id="sop" rows="5"></textarea>
+      <div class="row-between">
+        <label class="check"><input id="offline" type="checkbox"> Offline (no model, fixture protocol)</label>
+        <button id="go" type="submit" class="primary">Run</button>
+      </div>
+    </form>
+
+    <section class="card timeline-card">
+      <div class="row-between"><h2>Agent</h2><span id="runId" class="muted small mono"></span></div>
+      <ol id="timeline" class="timeline"><li class="empty muted">Type a request and press Run. ARGUS calls LanM, PreCheck and AHC as tools; every call shows up here.</li></ol>
+    </section>
+  </aside>
+
+  <section class="right">
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="variants">1 · Variants &amp; TEA gate</button>
+      <button class="tab" data-tab="review">2 · Review <span id="reviewDot" class="dot hidden"></span></button>
+      <button class="tab" data-tab="simulation">3 · AHC simulation</button>
+      <button class="tab" data-tab="code">PLR script</button>
+    </nav>
+
+    <div id="tab-variants" class="panel active">
+      <div id="variantsEmpty" class="placeholder">Ranked LanM variants and their starting concentrations appear here.</div>
+      <div id="variantsBody" class="hidden">
+        <div class="card">
+          <div class="row-between"><h2 id="variantsTitle">Top variants</h2><span id="variantsMeta" class="muted small"></span></div>
+          <table class="tbl" id="variantsTable"></table>
+          <p id="variantsNote" class="muted small"></p>
+        </div>
+        <div class="card" id="plateCard">
+          <div class="row-between"><h2>Plate map · starting concentrations</h2><span id="pmFormula" class="muted small mono"></span></div>
+          <div id="plateMap" class="platemap"></div>
+          <p id="pmNote" class="muted small"></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-review" class="panel">
+      <div id="reviewEmpty" class="placeholder">When PreCheck has a passing protocol, the SOP and the robot's steps appear here side by side for your review.</div>
+      <div id="reviewBody" class="hidden">
+        <div id="reviewBanner" class="banner hidden"></div>
+        <div class="card">
+          <div class="row-between"><h2 id="protoTitle">Automated steps</h2><span id="protoMeta" class="muted small"></span></div>
+          <p class="muted small">Compare with the SOP in the left panel. Each step quotes the SOP clause it carries out.</p>
+          <ol id="steps" class="steps"></ol>
+          <div id="assayCtx" class="ctx hidden"></div>
+        </div>
+        <div class="card" id="labwareCard">
+          <div class="row-between"><h2>Labware check with AHC</h2><span id="labwareState" class="pill"></span></div>
+          <p class="muted small">AHC's simulated STARlet loads PreCheck's deck. Labware AHC can't load, and reservoirs that would run too shallow, go back to PreCheck to fix before you review.</p>
+          <table class="tbl small" id="roles"></table>
+          <ol id="labwareRounds" class="rounds"></ol>
+          <details><summary>What AHC's STARlet accepts</summary><p id="accepts" class="small mono"></p></details>
+        </div>
+        <div class="card">
+          <h2>PreCheck flags <span id="flagCount" class="muted small"></span></h2>
+          <ul id="flags" class="flags"></ul>
+          <div id="setupBox" class="hidden"><h2 style="margin-top:12px">Deck setup before a real run</h2><ul id="setup" class="checklist"></ul></div>
+          <details><summary>Assumptions PreCheck made while drafting</summary><ul id="assumptions" class="plain"></ul></details>
+          <details id="notesBox"><summary>Where AHC's labware model differs from VENUS <span id="notesCount" class="muted"></span></summary><ul id="modelNotes" class="plain small"></ul></details>
+          <details><summary>Deck layout handed to AHC</summary><table class="tbl" id="labware"></table><pre id="layoutYaml" class="code small"></pre></details>
+          <details id="repairBox" class="hidden"><summary>Repairs and changes</summary><pre id="repairs" class="code small"></pre></details>
+        </div>
+        <div id="decision" class="card decision hidden">
+          <h2>Your decision</h2>
+          <p class="muted small">Approving sends this exact version to AHC's simulated STARlet. Your approval is also recorded as the deck check for the layout above.</p>
+          <div class="decision-row">
+            <input id="reviewer" placeholder="Your name" autocomplete="name">
+            <input id="note" placeholder="Note, or the change you want">
+            <button id="approve" class="primary">Approve &amp; simulate</button>
+            <button id="revise" class="secondary">Request changes</button>
+          </div>
+          <p id="decisionMsg" class="small"></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-simulation" class="panel">
+      <div id="simEmpty" class="placeholder">After you approve, the protocol runs on AHC's simulated Hamilton STARlet. Its calls stream here.</div>
+      <div id="simBody" class="hidden">
+        <div id="simSummary" class="card hidden"></div>
+        <div id="viewCard" class="card hidden">
+          <div class="row-between"><h2>Live deck · PyLabRobot 3D</h2><a id="viewLink" class="muted small" target="_blank" rel="noopener">open in its own tab ↗</a></div>
+          <p class="muted small">AHC's simulated STARlet, drawn from the digital twin's state: tips leave the rack and wells fill as each call runs. Drag to orbit, scroll to zoom.</p>
+          <iframe id="view3d" class="view3d" title="3D view of the simulated STARlet deck"></iframe>
+        </div>
+        <div class="card">
+          <div class="row-between"><h2>Final plate volumes · AHC vs PreCheck</h2><span class="muted small">µL, simulated (not measured)</span></div>
+          <div id="volGrid" class="volgrid"></div>
+        </div>
+        <div class="card">
+          <h2>AHC calls <span id="callCount" class="muted small"></span></h2>
+          <div class="scroll"><table class="tbl small" id="calls"></table></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-code" class="panel">
+      <div id="codeEmpty" class="placeholder">PreCheck's standalone PyLabRobot script appears here.</div>
+      <div id="codeBody" class="card hidden"><div class="row-between"><h2>PyLabRobot script</h2><span id="codePath" class="muted small mono"></span></div><pre id="code" class="code"></pre></div>
+    </div>
+  </section>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>

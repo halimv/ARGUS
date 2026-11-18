@@ -1,0 +1,40 @@
+[project]
+name = "argus"
+version = "0.1.0"
+description = "ARGUS: one prompt from LanM variant selection (TEA gate) to a reviewed, simulated Hamilton STARlet protocol"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "ahc",
+  "pylabrobot",
+  "mcp==2.2.0",
+  "pyyaml>=6.0",
+  "pypdf",
+  "claude-agent-sdk",
+  "fastapi",
+  "uvicorn",
+  "python-multipart",
+]
+
+[project.scripts]
+argus = "argus.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8", "anyio>=4.5", "httpx"]
+
+[tool.uv.sources]
+ahc = { path = "ahc", editable = true }
+pylabrobot = { git = "https://github.com/pylabrobot/pylabrobot", rev = "6262d633394cecb76673f31c79f10cb0ab2fa001" }
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["argus"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
