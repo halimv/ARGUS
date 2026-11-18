@@ -1,5 +1,9 @@
 # ARGUS
 
+![GIF of the serial dilution running on AHC's simulated STARlet](docs/screenshots/simulation-run.gif)
+
+*The approved serial dilution running on AHC's simulated STARlet, recorded from ARGUS and played back at 2×.*
+
 ARGUS is one platform built from three systems. A scientist on the LLNL SpyCI-LAMBS team types one request and uploads an SOP. An agent then calls each system as a tool:
 
 | Step | System | Tool | What it does |
@@ -25,10 +29,6 @@ A protocol AHC still refuses after three rounds is marked NOT READY and can't be
 ## Screenshots
 
 These come from an offline run of `PreCheck/files/input.txt`.
-
-**The simulated run, recorded as a GIF from ARGUS.** Every AHC call of the approved serial dilution runs on the simulated STARlet. Tips leave the rack, saline and stocks fill the plate, and the series moves across columns 1 to 6. The GIF is played back at 2×.
-
-![GIF of the serial dilution running on AHC's simulated STARlet](docs/screenshots/simulation-run.gif)
 
 **AHC simulation, live 3D deck.** PyLabRobot's 3D viewer draws the deck as each call moves tips and liquid. The head panels (96-head, the 8 channels, the gripper) are docked at the right edge so the whole machine stays in view.
 
