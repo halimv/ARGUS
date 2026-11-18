@@ -1,10 +1,10 @@
 # ARGUS
 
-ARGUS keeps its protocol dashboard at the top and embeds the complete research application in a wider **Research Project** section below. Use its **Chat**, **Build**, **Candidates**, **Database**, and **Tools** tabs for research, tool development, shared evidence, numerical analyses and registered custom methods. VENUS is not required for research.
+ARGUS embeds **Oracle**, the complete research application, in a compact chat panel beneath the pipeline request form. Switch between **Chat** and **Build**, or **Expand** it for the full workspace. **Browse** opens candidates, database records, or tools in the expanded view. Oracle uses ARGUS's black-and-orange palette when embedded; the standalone application's appearance is unchanged. VENUS is not required for research.
 
-## Research workspace and shared records
+## Oracle and shared records
 
-`argus serve` starts the full research application on an automatically selected loopback port. ARGUS embeds it through its own `/research/` bridge; the original standalone application remains available through **Open separately**. Both services stop together. No model request is made during startup, and local model servers are not started automatically.
+`argus serve` starts the full research application on an automatically selected loopback port. ARGUS embeds it through its own `/research/` bridge; the original standalone application remains available through Oracle's separate-window arrow. Both services stop together. No model request is made during startup, and local model servers are not started automatically.
 
 On first use, an empty `workspace/lanm` receives the verified shared starter: **616 candidates, 441 library records including 14 sources, and two registered method versions**. The starter does not migrate original projects, conversations, project sources, experiments or run history. The research application creates a fresh exploration project. The original standalone research database remains separate and untouched.
 
@@ -80,9 +80,9 @@ uv run argus serve            # http://127.0.0.1:8780
 
 On Windows, after installing uv, double-click **Launch ARGUS.cmd**, or run `./launch-argus.ps1`. The launcher initializes missing submodules and installs the locked dependencies when the environment is absent. Use `./launch-argus.ps1 -Sync` after dependency updates. `-ProfilesFile PATH_TO_MODEL_PROFILES_JSON` selects an existing model configuration; it does not import research projects or conversations.
 
-Click **Research Project** in the ARGUS header to jump to the embedded workspace below, or choose **Open separately** there. Chat and Build, shared evidence, candidate records, calculations, and reusable methods are available without VENUS. **Expand research** provides more room. Keep the launcher running while using either view.
+Click **Oracle** in the ARGUS header to jump to its compact panel, or use the separate-window arrow there. **Chat** and **Build** are available directly in the panel. **Expand** opens the complete workspace without reloading the conversation; **Collapse** returns to the compact conversation. **Browse** expands candidates, database records, or tools. Keep the launcher running while using either view.
 
-The original protocol dashboard remains visible. Its request form starts with `PreCheck/files/input.txt` (a 1:10 serial dilution) and an example request. When protocol setup is available, select a research project if desired, then press **Run**. Without VENUS, the form explains the missing setup and disables protocol execution; Research Project remains available.
+The original protocol dashboard remains visible. Its request form starts with `PreCheck/files/input.txt` (a 1:10 serial dilution) and an example request. When protocol setup is available, select a research project if desired, then press **Run**. Without VENUS, the form explains the missing setup and disables protocol execution; Oracle remains available.
 
 - **Variants & assay map:** the ranked variants, then the plate map of starting concentrations.
 - **Review:** appears once PreCheck has a passing protocol. The SOP stays in the left panel, and each step quotes the SOP clause it carries out. Approve, or describe a change.

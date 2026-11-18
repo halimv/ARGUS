@@ -13,7 +13,7 @@
     <span class="sub">LanM selection → SOP translation → reviewed STARlet simulation · SpyCI-LAMBS</span>
   </div>
   <div class="top-right">
-    <a id="researchWorkspaceLink" class="workspace-link" href="#researchWorkspace" title="Open Research Project below">Research Project ↓</a>
+    <a id="researchWorkspaceLink" class="workspace-link" href="#researchWorkspace" title="Open Oracle">Oracle ↓</a>
     <span id="status" class="pill">idle</span>
     <span id="cost" class="muted small"></span>
   </div>
@@ -24,7 +24,7 @@
     <form id="form" class="card">
       <div class="row-between"><label class="lbl" for="lanmProject">Research project</label><button id="refreshProjects" type="button" class="small">Refresh</button></div>
       <select id="lanmProject"><option value="">Create a new project from this request</option></select>
-      <p class="muted small">The pipeline uses the selected project's records and metal pair. <button id="inspectResearchProject" type="button" class="text-link">Explore this project below ↓</button></p>
+      <p class="muted small">The pipeline uses the selected project's records and metal pair. <button id="inspectResearchProject" type="button" class="text-link">Open in Oracle ↓</button></p>
       <label class="lbl" for="prompt">Request</label>
       <textarea id="prompt" rows="5" placeholder="What should ARGUS do?"></textarea>
       <div class="row-between">
@@ -39,6 +39,19 @@
       <p id="protocolSetup" class="muted small" role="status">Checking protocol setup…</p>
     </form>
 
+    <section id="researchWorkspace" class="card research-workspace" aria-labelledby="researchHeading">
+      <div class="research-heading">
+        <h2 id="researchHeading">Oracle</h2>
+        <div class="research-actions"><button id="expandResearch" type="button" aria-expanded="false" aria-controls="researchFrame">Expand ↗</button><a id="researchStandalone" href="/lanm" target="_blank" rel="noopener noreferrer" title="Open the research application separately" aria-label="Open Oracle separately">↗</a></div>
+      </div>
+      <div class="research-controls" aria-label="Oracle navigation">
+        <div class="research-modes" role="group" aria-label="Conversation mode"><button id="researchChat" type="button" class="active" aria-pressed="true">Chat</button><button id="researchBuild" type="button" aria-pressed="false">Build</button></div>
+        <select id="researchBrowse" aria-label="Browse research records and tools"><option value="">Browse…</option><option value="candidates">Candidates</option><option value="database">Database</option><option value="tools">Tools</option></select>
+      </div>
+      <p id="researchStatus" class="muted small" role="status">Connecting to Oracle…</p>
+      <iframe id="researchFrame" class="research-frame" title="Oracle research assistant" src="about:blank"></iframe>
+      <div id="researchUnavailable" class="research-unavailable hidden"><p>Oracle could not be loaded.</p><button id="retryResearch" type="button">Try again</button></div>
+    </section>
   </aside>
 
   <section class="right">
@@ -148,16 +161,8 @@
     </div>
   </section>
 
-  <section id="researchWorkspace" class="card research-workspace" aria-labelledby="researchHeading">
-    <div class="research-heading">
-      <div><h2 id="researchHeading">Research Project</h2><p class="muted small">Chat, build and use tools, and explore candidates and evidence in the same project.</p></div>
-      <div class="research-actions"><button id="expandResearch" type="button" aria-expanded="false">Expand research</button><a id="researchStandalone" href="/lanm" target="_blank" rel="noopener noreferrer">Open separately ↗</a></div>
-    </div>
-    <p id="researchStatus" class="muted small" role="status">Connecting to the research workspace…</p>
-    <iframe id="researchFrame" class="research-frame" title="Research Project: chat, build, candidates, database and tools" src="about:blank"></iframe>
-    <div id="researchUnavailable" class="research-unavailable hidden"><p>The research workspace could not be loaded.</p><button id="retryResearch" type="button">Try again</button></div>
-  </section>
 </main>
+<div id="researchBackdrop" class="research-backdrop hidden" aria-hidden="true"></div>
 <script src="/static/research.js"></script>
 <script src="/static/app.js"></script>
 </body>
