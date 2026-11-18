@@ -22,6 +22,30 @@ A protocol AHC still refuses after three rounds is marked NOT READY and can't be
 
 `run_ahc_simulation` is refused in code until the scientist approves the exact version under review (checked by the IR hash). Any revision needs a new approval.
 
+## Screenshots
+
+These come from an offline run of `PreCheck/files/input.txt`.
+
+**AHC simulation, live 3D deck.** The approved protocol runs on AHC's simulated STARlet, and PyLabRobot's 3D viewer draws the deck as each call moves tips and liquid.
+
+![AHC simulation tab with the live PyLabRobot 3D deck](docs/screenshots/3-simulation.png)
+
+**1 · Variants & TEA gate.** The top LanM variants for Nd over La, then the plate map of starting concentrations scaled by contrast.
+
+![Variants and TEA gate tab](docs/screenshots/1-variants.png)
+
+**2 · Review.** The robot's steps in plain language. Each step quotes the SOP clause it carries out, and the full SOP stays in the left panel. Approve, or ask for changes.
+
+![Review tab](docs/screenshots/2-review.png)
+
+**3 · AHC simulation, results.** The run's summary, final plate volumes from AHC compared with PreCheck's arithmetic, and every AHC call.
+
+![AHC simulation results](docs/screenshots/3b-simulation-results.png)
+
+**PLR script.** PreCheck's standalone PyLabRobot script for the same protocol.
+
+![PLR script tab](docs/screenshots/4-plr-script.png)
+
 ## Run it
 
 You need Python 3.12 (uv installs it) and the `claude` CLI, logged in. The agent and PreCheck both use your Claude Code login, so no API key is needed. PreCheck also needs the VENUS labware library, at the path PreCheck's setup saved in `~/.config/precheck/config.json`.
@@ -40,7 +64,7 @@ The page opens with `PreCheck/files/input.txt` (a 1:10 serial dilution) and an e
   - A live 3D view of the simulated STARlet, using PyLabRobot's Viewer3D through AHC's `LiveView`. Tips leave the rack and wells fill as each call runs.
   - Every AHC call streams in as it runs.
   - Final plate volumes are shown against PreCheck's expected volumes.
-  - The run pauses 0.3 s after each call (`ARGUS_SIM_PACE_S`) so it can be watched. `ARGUS_3D=0` turns the 3D view off.
+  - The run pauses 0.5 s after each call (`ARGUS_SIM_PACE_S`) so it can be watched. `ARGUS_3D=0` turns the 3D view off.
 - **PLR script:** PreCheck's standalone PyLabRobot script.
 
 **Offline mode** (the checkbox, or `uv run argus demo --offline` in a terminal):

@@ -31,7 +31,7 @@ AGENT_MODEL = os.environ.get("ARGUS_MODEL", "claude-opus-5-5")
 # Simulation tab. ARGUS_3D=0 turns it off (the tests do). SIM_PACE_S: a pause after each AHC call while the view is
 # on, so the scientist can watch tips and liquid move (a simulated run otherwise ends in milliseconds).
 VIEW_3D = os.environ.get("ARGUS_3D", "1") != "0"
-SIM_PACE_S = float(os.environ.get("ARGUS_SIM_PACE_S", "0.3"))
+SIM_PACE_S = float(os.environ.get("ARGUS_SIM_PACE_S", "0.5"))
 
 _done = False
 

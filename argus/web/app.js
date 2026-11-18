@@ -123,9 +123,10 @@ function concColor(v, lo, hi) {
 }
 function fmt(uM) {
   if (uM == null) return "–";
-  if (uM >= 1) return uM.toPrecision(3).replace(/\.?0+$/, "") + " µM";
-  if (uM >= 1e-3) return (uM * 1e3).toPrecision(3).replace(/\.?0+$/, "") + " nM";
-  if (uM >= 1e-6) return (uM * 1e6).toPrecision(3).replace(/\.?0+$/, "") + " pM";
+  const sig = (x) => String(Number(x.toPrecision(3)));  // 3 significant figures, trailing zeros after the point dropped
+  if (uM >= 1) return sig(uM) + " µM";
+  if (uM >= 1e-3) return sig(uM * 1e3) + " nM";
+  if (uM >= 1e-6) return sig(uM * 1e6) + " pM";
   return uM.toExponential(1) + " µM";
 }
 function renderPlateMap(pm) {
@@ -150,6 +151,13 @@ function renderPlateMap(pm) {
   window.__plateMap = pm;
 }
 
+function sopClause(sp) {
+  // The matched span, widened to whole words (the match can start or end inside one: "9% normal saline", "i.e").
+  let a = sp.start, b = sp.end;
+  while (a > 0 && !/\s/.test(sopText[a - 1])) a--;
+  while (b < sopText.length && !/\s/.test(sopText[b])) b++;
+  return sopText.slice(a, b).trim();
+}
 function renderProtocol(p) {
   $("reviewEmpty").classList.add("hidden"); $("reviewBody").classList.remove("hidden");
   if (p.status === "NOT_READY") {
@@ -170,7 +178,7 @@ function renderProtocol(p) {
     <li>
       <span class="chip irs">IR ${s.ir_steps[0]}–${s.ir_steps[1]}</span>
       <div class="t">${esc(s.title)}</div>
-      ${s.sop ? `<blockquote class="sopq"><span class="muted">SOP:</span> “${esc(sopText.slice(s.sop.start, s.sop.end).trim())}”</blockquote>` : ""}
+      ${s.sop ? `<blockquote class="sopq"><span class="muted">SOP:</span> “${esc(sopClause(s.sop))}”</blockquote>` : ""}
       <ul>${s.details.map((d) => `<li>${esc(d)}</li>`).join("")}</ul>
       ${s.concentrations.length ? `<div class="conc">${s.concentrations.map((c) => `<span class="chip" title="${esc(Object.entries(c.by_row).map(([r, v]) => r + ": " + v).join(", "))}">col ${c.column}: ${esc(c.range)}</span>`).join("")}</div>` : ""}
     </li>`).join("");
